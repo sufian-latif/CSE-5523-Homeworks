@@ -53,13 +53,14 @@ def ID3(data, features, MIN_GAIN=0.1):
             maxGain = gain
             splitFeature = f
 
+    nPos = [d[0] for d in data].count(POS_CLASS)
+    nNeg = len(data) - nPos
     if not maxGain > MIN_GAIN:
-        nPos = [d[0] for d in data].count(POS_CLASS)
-        return DtNode(splitFeature, (nPos, len(data) - nPos), maxGain, None, None)
+        return DtNode(splitFeature, (nPos, nNeg), maxGain, None, None)
 
     lData, rData = Split(data, splitFeature)
     newFeatures = features - set([splitFeature])
-    return DtNode(splitFeature, (len(lData), len(rData)), maxGain,
+    return DtNode(splitFeature, (nPos, nNeg), maxGain,
                   ID3(lData, newFeatures, MIN_GAIN), ID3(rData, newFeatures, MIN_GAIN))
 
 if __name__ == "__main__":
