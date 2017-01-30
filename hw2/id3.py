@@ -7,9 +7,20 @@ DtNode = namedtuple("DtNode", "fVal, nPosNeg, gain, left, right")
 
 POS_CLASS = 'e'
 
+def Entropy(data):
+    if len(data) == 0: return 0.0
+    nPos = sum(1 for d in data if d[0] == POS_CLASS)
+    nNeg = len(data) - nPos
+    f = lambda a, b: 0.0 if a == 0 else -1.0 * a / b * (math.log(a, 2) - math.log(b, 2))
+    return f(nPos, len(data)) + f(nNeg, len(data))
+
+def Split(data, f):
+    return [d for d in data if d[f.feature] == f.value], [d for d in data if d[f.feature] != f.value]
+
 def InformationGain(data, f):
-    #TODO: compute information gain of this dataset after splitting on feature F
-    return 0
+    if len(data) == 0: return 0.0
+    tData, fData = Split(data, f)
+    return Entropy(data) - (len(tData) * Entropy(tData) + len(fData) * Entropy(fData)) / len(data)
 
 def Classify(tree, instance):
     if tree.left == None and tree.right == None:
@@ -31,18 +42,32 @@ def PrintTree(node, prefix=''):
     if node.left != None:
         PrintTree(node.left, prefix + '-')
     if node.right != None:
-        PrintTree(node.right, prefix + '-')        
-        
+        PrintTree(node.right, prefix + '-')
+
 def ID3(data, features, MIN_GAIN=0.1):
-    #TODO: implement decision tree learning
-    return DtNode(FeatureVal(1,'x'), (100,0), 0, None, None)
+    maxGain = -1
+    splitFeature = None
+    for f in features:
+        gain = InformationGain(data, f)
+        if gain > maxGain:
+            maxGain = gain
+            splitFeature = f
+
+    if not maxGain > MIN_GAIN:
+        nPos = [d[0] for d in data].count(POS_CLASS)
+        return DtNode(splitFeature, (nPos, len(data) - nPos), maxGain, None, None)
+
+    lData, rData = Split(data, splitFeature)
+    newFeatures = features - set([splitFeature])
+    return DtNode(splitFeature, (len(lData), len(rData)), maxGain,
+                  ID3(lData, newFeatures, MIN_GAIN), ID3(rData, newFeatures, MIN_GAIN))
 
 if __name__ == "__main__":
     train = MushroomData(sys.argv[1])
     dev = MushroomData(sys.argv[2])
 
     dTree = ID3(train.data, train.features, MIN_GAIN=float(sys.argv[3]))
-    
+
     PrintTree(dTree)
 
     print Accuracy(dTree, dev.data)
