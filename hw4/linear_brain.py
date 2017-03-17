@@ -1,5 +1,6 @@
 import scipy.io as sio
 import numpy as np
+import math
 
 starplus = sio.loadmat("data-starplus-04847-v7.mat")
 
@@ -76,25 +77,60 @@ data = starplus['data']
 
 def HingeLoss(X, Y, W, lmda):
     # TODO: Compute (regularized) Hinge Loss
-    loss = 0
-    return loss
+    # loss = 0
+    #
+    # for i in range(Y.shape[0]):
+    #     loss += max(0, 1 - Y[i] * np.dot(W, X[i]))
+    # loss += lmda * np.dot(W, W)
+    #
+    # return loss
+
+    return sum(max(0, 1 - t) for t in np.dot(W, np.multiply(Y, X.T))) + lmda * np.dot(W, W)
 
 
 def SgdHinge(X, Y, maxIter, learningRate, lmda):
     W = np.zeros(X.shape[1])
     # TODO: implement stochastic (sub) gradient descent with the hinge loss function
+    loss = HingeLoss(X, Y, W, lmda)
+    diff = 1
+    i = 0
+
+    while abs(diff) > 0.0001 or i < maxIter:
+        # update W
+        diff = loss
+        loss = HingeLoss(X, Y, W, lmda)
+        diff -= loss
+        i += 1
     return W
 
 
 def LogisticLoss(X, Y, W, lmda):
     # TODO: Compute (regularized) Logistic Loss
-    loss = 0
-    return loss
+    # loss = 0
+    #
+    # for i in range(Y.shape[0]):
+    #     loss += math.log(1 + math.exp(-Y[i] * np.dot(W, X[i])))
+    # loss += lmda * np.dot(W, W)
+    #
+    # return loss
+
+    return sum(math.log(1 + math.exp(-t)) for t in np.dot(W, np.multiply(Y, X.T))) + lmda * np.dot(W, W)
 
 
 def SgdLogistic(X, Y, maxIter, learningRate, lmda):
     W = np.zeros(X.shape[1])
     # TODO: implement stochastic gradient descent using the logistic loss function
+    loss = LogisticLoss(X, Y, W, lmda)
+    diff = 1
+    i = 0
+
+    while abs(diff) > 0.0001 or i < maxIter:
+        # update W
+        diff = loss
+        loss = LogisticLoss(X, Y, W, lmda)
+        diff -= loss
+        i += 1
+
     return W
 
 
@@ -109,7 +145,7 @@ def crossValidation(X, Y, SGD, lmda, learningRate, maxIter=100, sample=range(20)
         training_indices = [j for j in range(X.shape[0]) if j != i]
         W = SGD(X[training_indices,], Y[training_indices,], maxIter=maxIter, lmda=lmda, learningRate=learningRate)
         print W
-        y_hat = np.sign(X[i,].dot(W))
+        y_hat = np.sign(X[i, ].dot(W))
 
         if y_hat == Y[i]:
             nCorrect += 1
@@ -139,6 +175,8 @@ def main():
     Y = np.ones(ntrials)
     Y[np.array([info[i]['firstStimulus'][0] != 'P' for i in range(ntrials)])] = -1
 
+    print LogisticLoss(X, Y, np.zeros(X.shape[1]), 0.1)
+
     # Randomly permute the data
     np.random.seed(1)  # Seed the random number generator to preserve the dev/test split
     permutation = np.random.permutation(ntrials)
@@ -149,8 +187,7 @@ def main():
     # Cross validation
     # Development
     # print "Accuracy (Logistic Loss):\t%s" % crossValidation(X, Y, SgdLogistic, maxIter=100, lmda=0.3, learningRate=0.0001, sample=range(20))
-    print "Accuracy (Hinge Loss):\t%s" % crossValidation(X, Y, SgdHinge, maxIter=100, lmda=1, learningRate=0.0001,
-                                                         sample=range(20))
+    # print "Accuracy (Hinge Loss):\t%s" % crossValidation(X, Y, SgdHinge, maxIter=100, lmda=1, learningRate=0.0001, sample=range(20))
 
     # Test
     # print "Accuracy (Logistic Loss):\t%s" % crossValidation(X, Y, SgdLogistic, maxIter=10, lmda=0.3, learningRate=0.0001, sample=range(20,X.shape[0]+1))
