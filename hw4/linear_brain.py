@@ -85,7 +85,7 @@ def HingeLoss(X, Y, W, lmda):
     #
     # return loss
 
-    return sum(max(0, 1 - t) for t in np.dot(W, np.multiply(Y, X.T))) + lmda * np.dot(W, W)
+    return sum(max(0, 1 - t) for t in np.multiply(Y, np.dot(W, X.T))) + lmda * np.dot(W, W)
 
 
 def SgdHinge(X, Y, maxIter, learningRate, lmda):
@@ -97,6 +97,9 @@ def SgdHinge(X, Y, maxIter, learningRate, lmda):
 
     while abs(diff) > 0.0001 or i < maxIter:
         # update W
+        print W
+        print loss
+        W = np.subtract(W, lmda * learningRate * loss * np.ones(W.shape))
         diff = loss
         loss = HingeLoss(X, Y, W, lmda)
         diff -= loss
@@ -114,8 +117,10 @@ def LogisticLoss(X, Y, W, lmda):
     #
     # return loss
 
-    return sum(math.log(1 + math.exp(-t)) for t in np.dot(W, np.multiply(Y, X.T))) + lmda * np.dot(W, W)
+    return sum(math.log(1 + math.exp(-t)) for t in np.multiply(Y, np.dot(W, X.T))) + lmda * np.dot(W, W)
 
+def LogisticGradient(X, Y, W, lmda):
+    return np.dot(np.multiply(Y, map(lambda t: -1. / (1. + math.exp(t)), np.multiply(Y, np.dot(W, X.T)))), X) + 2 * lmda * W
 
 def SgdLogistic(X, Y, maxIter, learningRate, lmda):
     W = np.zeros(X.shape[1])
@@ -124,8 +129,9 @@ def SgdLogistic(X, Y, maxIter, learningRate, lmda):
     diff = 1
     i = 0
 
-    while abs(diff) > 0.0001 or i < maxIter:
+    while abs(diff) > 0.0001 and i < maxIter:
         # update W
+        W = np.subtract(W, learningRate * LogisticGradient(X, Y, W, lmda))
         diff = loss
         loss = LogisticLoss(X, Y, W, lmda)
         diff -= loss
@@ -175,7 +181,7 @@ def main():
     Y = np.ones(ntrials)
     Y[np.array([info[i]['firstStimulus'][0] != 'P' for i in range(ntrials)])] = -1
 
-    print LogisticLoss(X, Y, np.zeros(X.shape[1]), 0.1)
+    # print LogisticLoss(X, Y, np.zeros(X.shape[1]), 0.1)
 
     # Randomly permute the data
     np.random.seed(1)  # Seed the random number generator to preserve the dev/test split
@@ -186,11 +192,11 @@ def main():
 
     # Cross validation
     # Development
-    # print "Accuracy (Logistic Loss):\t%s" % crossValidation(X, Y, SgdLogistic, maxIter=100, lmda=0.3, learningRate=0.0001, sample=range(20))
+    print "Accuracy (Logistic Loss):\t%s" % crossValidation(X, Y, SgdLogistic, maxIter=100, lmda=0.3, learningRate=0.0001, sample=range(20))
     # print "Accuracy (Hinge Loss):\t%s" % crossValidation(X, Y, SgdHinge, maxIter=100, lmda=1, learningRate=0.0001, sample=range(20))
 
     # Test
-    # print "Accuracy (Logistic Loss):\t%s" % crossValidation(X, Y, SgdLogistic, maxIter=10, lmda=0.3, learningRate=0.0001, sample=range(20,X.shape[0]+1))
+    print "Accuracy (Logistic Loss):\t%s" % crossValidation(X, Y, SgdLogistic, maxIter=10, lmda=0.3, learningRate=0.0001, sample=range(20, X.shape[0]))
     # print "Accuracy (Hinge Loss):\t%s" % crossValidation(X, Y, SgdHinge, maxIter=100, lmda=1, learningRate=0.0001, sample=range(20,X.shape[0]+1))
 
 
