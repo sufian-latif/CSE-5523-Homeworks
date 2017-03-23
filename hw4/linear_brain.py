@@ -76,32 +76,37 @@ data = starplus['data']
 ###########################################
 
 def HingeLoss(X, Y, W, lmda):
-    return sum(max(0, 1 - t) for t in np.multiply(Y, np.dot(W, X.T))) + lmda * np.dot(W, W)
+    return sum(map(lambda t: max(0, 1 - t), np.multiply(Y, np.dot(W, X.T)))) + lmda * np.dot(W, W)
 
 def HingeGradient(X, Y, W, lmda):
-    return np.dot(np.multiply(Y, map(lambda t: 0 if t > 1 else -1., np.multiply(Y, np.dot(W, X.T)))), X) + 2 * lmda * W
+    return np.dot(np.multiply(Y, map(lambda t: -1 if t < 1 else 0, np.multiply(Y, np.dot(W, X.T)))), X) + 2 * lmda * W
 
 
 def SgdHinge(X, Y, maxIter, learningRate, lmda):
     W = np.zeros(X.shape[1])
+    W = np.subtract(W, learningRate * HingeGradient(X, Y, W, lmda))
     loss = HingeLoss(X, Y, W, lmda)
+    print loss
     diff = 1
-    i = 0
+    i = 1
 
     while abs(diff) > 0.0001 and i < maxIter:
-        # update W
-        # print W
-        # print loss
+        i += 1
         W = np.subtract(W, learningRate * HingeGradient(X, Y, W, lmda))
         diff = loss
         loss = HingeLoss(X, Y, W, lmda)
         diff -= loss
-        i += 1
+        if diff < 0:
+            break
+        print loss
+
+    # print 'Loss after', i, 'updates:', loss
+
     return W
 
 
 def LogisticLoss(X, Y, W, lmda):
-    return sum(math.log(1 + math.exp(-t)) for t in np.multiply(Y, np.dot(W, X.T))) + lmda * np.dot(W, W)
+    return sum(map(lambda t: math.log(1 + math.exp(-t)), np.multiply(Y, np.dot(W, X.T)))) + lmda * np.dot(W, W)
 
 def LogisticGradient(X, Y, W, lmda):
     return np.dot(np.multiply(Y, map(lambda t: -1. / (1. + math.exp(t)), np.multiply(Y, np.dot(W, X.T)))), X) + 2 * lmda * W
@@ -109,16 +114,19 @@ def LogisticGradient(X, Y, W, lmda):
 def SgdLogistic(X, Y, maxIter, learningRate, lmda):
     W = np.zeros(X.shape[1])
     loss = LogisticLoss(X, Y, W, lmda)
+    print loss
     diff = 1
     i = 0
 
     while abs(diff) > 0.0001 and i < maxIter:
-        # update W
+        i += 1
         W = np.subtract(W, learningRate * LogisticGradient(X, Y, W, lmda))
         diff = loss
         loss = LogisticLoss(X, Y, W, lmda)
         diff -= loss
-        i += 1
+        print loss
+
+    # print 'Loss after', i, 'updates:', loss
 
     return W
 
@@ -133,7 +141,6 @@ def crossValidation(X, Y, SGD, lmda, learningRate, maxIter=100, sample=range(20)
 
         training_indices = [j for j in range(X.shape[0]) if j != i]
         W = SGD(X[training_indices, ], Y[training_indices, ], maxIter=maxIter, lmda=lmda, learningRate=learningRate)
-        print W
         y_hat = np.sign(X[i, ].dot(W))
 
         if y_hat == Y[i]:
@@ -165,21 +172,33 @@ def main():
     Y[np.array([info[i]['firstStimulus'][0] != 'P' for i in range(ntrials)])] = -1
 
     # Randomly permute the data
-    np.random.seed(2)  # Seed the random number generator to preserve the dev/test split
-    permutation = np.random.permutation(ntrials)
+    np.random.seed(0)  # Seed the random number generator to preserve the dev/test split
     permutation = np.random.permutation(X.shape[0])
-    permutation = np.random.permutation(20)
     X = X[permutation, ]
     Y = Y[permutation, ]
 
     # Cross validation
     # Development
-    # print "Accuracy (Logistic Loss):\t%s" % crossValidation(X, Y, SgdLogistic, maxIter=100, lmda=0.3, learningRate=0.1, sample=range(20))
-    # print "Accuracy (Hinge Loss):\t%s" % crossValidation(X, Y, SgdHinge, maxIter=100, lmda=1, learningRate=0.1, sample=range(20))
+
+    # for sgd in (SgdLogistic, SgdHinge):
+    #     print 'Loss function:', sgd.__name__
+    #     for rate in (0.1, 0.01, 0.001, 0.0001):
+    #         for lmda in (1, 0.3, 0.1):
+    #             try:
+    #                 print 'lmda = ', lmda, ', learningRate = ', rate
+    #                 acc = crossValidation(X, Y, sgd, maxIter = 100, lmda = lmda, learningRate = rate, sample = range(20))
+    #                 print 'Accuracy (Dev) = ', acc
+    #                 acc = crossValidation(X, Y, sgd, maxIter = 100, lmda = lmda, learningRate = rate, sample = range(20, X.shape[0]))
+    #                 print 'Accuracy (Test) = ', acc
+    #             except Exception as ex:
+    #                 print ex
+
+    print "Accuracy (Logistic Loss):\t%s" % crossValidation(X, Y, SgdLogistic, maxIter=100, lmda=0.1, learningRate=0.0001, sample=range(20))
+    print "Accuracy (Hinge Loss):\t%s" % crossValidation(X, Y, SgdHinge, maxIter=100, lmda=1, learningRate=0.1, sample=range(20))
 
     # Test
-    # print "Accuracy (Logistic Loss):\t%s" % crossValidation(X, Y, SgdLogistic, maxIter=10, lmda=0.3, learningRate=0.0001, sample=range(20, X.shape[0]))
-    # print "Accuracy (Hinge Loss):\t%s" % crossValidation(X, Y, SgdHinge, maxIter=100, lmda=1, learningRate=0.0001, sample=range(20,X.shape[0]))
+    # print "Accuracy (Logistic Loss):\t%s" % crossValidation(X, Y, SgdLogistic, maxIter=10, lmda=0.1, learningRate=0.0001, sample=range(20, X.shape[0]))
+    # print "Accuracy (Hinge Loss):\t%s" % crossValidation(X, Y, SgdHinge, maxIter=100, lmda=1, learningRate=0.1, sample=range(20,X.shape[0]))
 
 
 if __name__ == "__main__":
