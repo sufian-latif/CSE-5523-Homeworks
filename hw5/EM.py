@@ -15,7 +15,8 @@ VAR_INIT = 1
 
 def logExpSum(x):
     # TODO: implement logExpSum
-    pass
+    xmax = max(x)
+    return xmax + math.log(sum(math.exp(xi - xmax) for xi in x))
 
 def readTrue(filename='wine-true.data'):
     f = open(filename)
@@ -79,9 +80,16 @@ class EM:
             self.priors.append(1/float(nClusters))
 
     def LogLikelihood(self, data):
-        logLikelihood = 0.0
-        # TODO: compute log-likelihood of the data
-        return logLikelihood
+        # logLikelihood = 0.0
+        # # TODO: compute log-likelihood of the data
+        # p = []
+        # for c in range(self.nClusters):
+        #     p.append(math.log(self.priors[c]) + sum(self.LogProb(j, c, data) for j in range(data.nRows)))
+        #
+        # return logExpSum(p)
+
+        return logExpSum(math.log(self.priors[c]) + sum(self.LogProb(i, c, data) for i in range(data.nRows))
+                         for c in range(self.nClusters))
 
     # Compute marginal distributions of hidden variables
     def Estep(self):
@@ -119,8 +127,7 @@ if __name__ == "__main__":
     d = Data('wine.train')
     if len(sys.argv) > 1:
         e = EM(d, int(sys.argv[1]))
-        for i in range(d.nRows):
-            print e.LogProb(i, 0, d)
+        print e.LogLikelihood(d)
     else:
         e = EM(d, 3)
     e.Run(100)
