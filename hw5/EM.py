@@ -111,26 +111,17 @@ class EM:
         return -0.5 * sum(math.log(param[i][1]) + (x[i] - param[i][0]) ** 2 / param[i][1] for i in range(data.nCols))
 
     def Run(self, maxsteps=100, testData=None):
-        # TODO: Implement EM algorithm
-        testLikelihood = None
         trainLikelihood = [self.LogLikelihood(self.data)]
+        testLikelihood = [self.LogLikelihood(testData)]if testData is not None else None
 
         diff = 1000
         while math.fabs(diff / trainLikelihood[-1]) > 0.001:
             self.Mstep(self.Estep())
             diff = trainLikelihood[-1]
             trainLikelihood.append(self.LogLikelihood(self.data))
-            diff = trainLikelihood[-1] - diff
-
-        if testData != None:
-            testLikelihood = [self.LogLikelihood(testData)]
-
-            diff = 1000
-            while math.fabs(diff / testLikelihood[-1]) > 0.001:
-                self.Mstep(self.Estep())
-                diff = testLikelihood[-1]
+            if testData != None:
                 testLikelihood.append(self.LogLikelihood(testData))
-                diff = testLikelihood[-1] - diff
+            diff = trainLikelihood[-1] - diff
 
         return trainLikelihood, testLikelihood
 
@@ -175,7 +166,7 @@ if __name__ == "__main__":
         except:
             pass
     pred = em.getPrediction()
-    plt.title('Iterations to converge for train and test set')
+    plt.title('Iterations vs log likelihood for training and test set')
     plt.xlabel('No. of iterations')
     plt.ylabel('Log Likelihood')
     plt.xticks(range(len(trainLikelihood)))
